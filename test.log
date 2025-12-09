@@ -1,0 +1,5 @@
+2024-12-09 10:00:01 INFO Server started on port 8080
+2024-12-09 10:00:15 INFO User login: user123
+2024-12-09 10:01:23 ERROR Database connection failed
+2024-12-09 10:01:25 WARN Retrying database connection
+2024-12-09 10:01:30 INFO Database connected successfully

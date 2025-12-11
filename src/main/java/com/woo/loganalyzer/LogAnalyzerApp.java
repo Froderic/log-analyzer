@@ -8,6 +8,7 @@ import picocli.CommandLine.Parameters;
 import java.io.File;
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 import java.util.regex.Pattern;
@@ -19,6 +20,7 @@ import java.time.format.DateTimeFormatter;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 @Command(
         name = "loganalyzer",
@@ -93,6 +95,9 @@ public class LogAnalyzerApp implements Callable<Integer> {
             description = "Show comprehensive summary report"
     )
     private boolean showSummary;
+
+    @Option(names = {"--export"}, description = "Export results to CSV file")
+    private String exportFile;
 
     @Override
     public Integer call() throws Exception {
@@ -310,27 +315,37 @@ public class LogAnalyzerApp implements Callable<Integer> {
             System.out.println("No logs to analyze.");
             return;
         }
+        // Check if we should export to CSV or print to console
+        if (exportFile != null) {
+            // Export to CSV
+            CSVExporter exporter = new CSVExporter(exportFile);
+            try {
+                exporter.exportLevelStats(levelCounts, totalLogs);
+            } catch (Exception e) {
+                System.err.println("Error exporting to CSV: " + e.getMessage());
+            }
+        } else {
+            System.out.println("\n" + "=".repeat(60));
+            System.out.println("LOG LEVEL STATISTICS");
+            System.out.println("=".repeat(60));
+            System.out.println(String.format("%-15s %-15s %-15s", "Level", "Count", "Percentage"));
+            System.out.println("-".repeat(60));
 
-        System.out.println("\n" + "=".repeat(60));
-        System.out.println("LOG LEVEL STATISTICS");
-        System.out.println("=".repeat(60));
-        System.out.println(String.format("%-15s %-15s %-15s", "Level", "Count", "Percentage"));
-        System.out.println("-".repeat(60));
+            // Sort by count (descending)
+            levelCounts.entrySet().stream()
+                    .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
+                    .forEach(entry -> {
+                        String level = entry.getKey();
+                        int count = entry.getValue();
+                        double percentage = (count * 100.0) / totalLogs;
+                        System.out.println(String.format("%-15s %-15d %-15.2f%%",
+                                level, count, percentage));
+                    });
 
-        // Sort by count (descending)
-        levelCounts.entrySet().stream()
-                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
-                .forEach(entry -> {
-                    String level = entry.getKey();
-                    int count = entry.getValue();
-                    double percentage = (count * 100.0) / totalLogs;
-                    System.out.println(String.format("%-15s %-15d %-15.2f%%",
-                            level, count, percentage));
-                });
-
-        System.out.println("-".repeat(60));
-        System.out.println(String.format("%-15s %-15d", "TOTAL", totalLogs));
-        System.out.println("=".repeat(60) + "\n");
+            System.out.println("-".repeat(60));
+            System.out.println(String.format("%-15s %-15d", "TOTAL", totalLogs));
+            System.out.println("=".repeat(60) + "\n");
+        }
     }
 
     private String extractLogLevel(String line) {
@@ -396,27 +411,38 @@ public class LogAnalyzerApp implements Callable<Integer> {
 
         final int finalTotal = totalLogs;
 
-        // Display statistics
-        System.out.println("\n" + "=".repeat(60));
-        System.out.println("TIME-BASED STATISTICS (" + timeStats.toUpperCase() + ")");
-        System.out.println("=".repeat(60));
-        System.out.println(String.format("%-25s %-15s %-15s", "Time Period", "Count", "Percentage"));
-        System.out.println("-".repeat(60));
+        // Check if we should export to CSV or print to console
+        if (exportFile != null) {
+            // Export to CSV
+            CSVExporter exporter = new CSVExporter(exportFile);
+            try {
+                exporter.exportTimeStats(timeCounts, timeStats.substring(0, 1).toUpperCase() + timeStats.substring(1));
+            } catch (Exception e) {
+                System.err.println("Error exporting to CSV: " + e.getMessage());
+            }
+        } else {
+            // Display statistics
+            System.out.println("\n" + "=".repeat(60));
+            System.out.println("TIME-BASED STATISTICS (" + timeStats.toUpperCase() + ")");
+            System.out.println("=".repeat(60));
+            System.out.println(String.format("%-25s %-15s %-15s", "Time Period", "Count", "Percentage"));
+            System.out.println("-".repeat(60));
 
-        // Sort by time period (chronological)
-        timeCounts.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .forEach(entry -> {
-                    String period = entry.getKey();
-                    int count = entry.getValue();
-                    double percentage = (count * 100.0) / finalTotal;
-                    System.out.println(String.format("%-25s %-15d %-15.2f%%",
-                            period, count, percentage));
-                });
+            // Sort by time period (chronological)
+            timeCounts.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .forEach(entry -> {
+                        String period = entry.getKey();
+                        int count = entry.getValue();
+                        double percentage = (count * 100.0) / finalTotal;
+                        System.out.println(String.format("%-25s %-15d %-15.2f%%",
+                                period, count, percentage));
+                    });
 
-        System.out.println("-".repeat(60));
-        System.out.println(String.format("%-25s %-15d", "TOTAL", finalTotal));
-        System.out.println("=".repeat(60) + "\n");
+            System.out.println("-".repeat(60));
+            System.out.println(String.format("%-25s %-15d", "TOTAL", finalTotal));
+            System.out.println("=".repeat(60) + "\n");
+        }
     }
 
     private String extractTimePeriod(String line, String mode) {
@@ -490,33 +516,50 @@ public class LogAnalyzerApp implements Callable<Integer> {
 
         final int finalTotal = totalLogs;
 
-        // Display statistics
-        System.out.println("\n" + "=".repeat(80));
-        System.out.println("TOP " + topN + " MOST FREQUENT LOG MESSAGES");
-        System.out.println("=".repeat(80));
-        System.out.println(String.format("%-50s %-12s %-12s", "Message", "Count", "Percentage"));
-        System.out.println("-".repeat(80));
+        // Check if we should export to CSV or print to console
+        if (exportFile != null) {
+            // Export to CSV
+            // First, get the top N messages
+            List<Map.Entry<String, Integer>> topMessages = messageCounts.entrySet().stream()
+                    .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
+                    .limit(topN)
+                    .collect(Collectors.toList());
 
-        // Sort by count descending and limit to topN
-        messageCounts.entrySet().stream()
-                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
-                .limit(topN)
-                .forEach(entry -> {
-                    String message = entry.getKey();
-                    int count = entry.getValue();
-                    double percentage = (count * 100.0) / finalTotal;
+            CSVExporter exporter = new CSVExporter(exportFile);
+            try {
+                exporter.exportTopMessages(topMessages, finalTotal);
+            } catch (Exception e) {
+                System.err.println("Error exporting to CSV: " + e.getMessage());
+            }
+        } else {
+            // Display statistics
+            System.out.println("\n" + "=".repeat(80));
+            System.out.println("TOP " + topN + " MOST FREQUENT LOG MESSAGES");
+            System.out.println("=".repeat(80));
+            System.out.println(String.format("%-50s %-12s %-12s", "Message", "Count", "Percentage"));
+            System.out.println("-".repeat(80));
 
-                    // Truncate long messages
-                    String displayMessage = message.length() > 47 ?
-                            message.substring(0, 47) + "..." : message;
+            // Sort by count descending and limit to topN
+            messageCounts.entrySet().stream()
+                    .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
+                    .limit(topN)
+                    .forEach(entry -> {
+                        String message = entry.getKey();
+                        int count = entry.getValue();
+                        double percentage = (count * 100.0) / finalTotal;
 
-                    System.out.println(String.format("%-50s %-12d %-12.2f%%",
-                            displayMessage, count, percentage));
-                });
+                        // Truncate long messages
+                        String displayMessage = message.length() > 47 ?
+                                message.substring(0, 47) + "..." : message;
 
-        System.out.println("-".repeat(80));
-        System.out.println(String.format("%-50s %-12d", "TOTAL LOGS ANALYZED", finalTotal));
-        System.out.println("=".repeat(80) + "\n");
+                        System.out.println(String.format("%-50s %-12d %-12.2f%%",
+                                displayMessage, count, percentage));
+                    });
+
+            System.out.println("-".repeat(80));
+            System.out.println(String.format("%-50s %-12d", "TOTAL LOGS ANALYZED", finalTotal));
+            System.out.println("=".repeat(80) + "\n");
+        }
     }
 
     private String extractMessage(String line) {
@@ -540,6 +583,14 @@ public class LogAnalyzerApp implements Callable<Integer> {
     }
 
     private void displaySummary() throws Exception {
+        // CSV export not supported for summary
+        if (exportFile != null) {
+            System.err.println("Error: CSV export is not supported for --summary");
+            System.err.println("Summary is a comprehensive visual report designed for console viewing.");
+            System.err.println("Use --stats, --time-stats, or --top with --export instead.");
+            return;
+        }
+
         Map<String, Integer> levelCounts = new HashMap<>();
         Map<String, Integer> dateCounts = new HashMap<>();
         Map<String, Integer> messageCounts = new HashMap<>();

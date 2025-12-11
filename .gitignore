@@ -8,14 +8,17 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
-*.iws
+# CSV exports (generated output files)
+*.csv
+
+# IntelliJ IDEA files
+.idea/
 *.iml
+*.iws
 *.ipr
+
+# macOS files
+.DS_Store
 
 ### Eclipse ###
 .apt_generated

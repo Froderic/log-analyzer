@@ -194,17 +194,19 @@ TOTAL                   200
 
 ## Expected Log Format
 
-The tool expects log files in the following format:
+The tool supports standard log formats with timestamps:
 ```
 YYYY-MM-DD HH:MM:SS LEVEL Message content
 ```
 
-Example:
+**Example:**
 ```
 2024-12-09 10:00:01 INFO Application started successfully
 2024-12-09 10:00:15 ERROR Connection timeout to database
 2024-12-09 10:00:30 WARN Retry attempt 3 of 5
 ```
+
+**Note:** The tool will attempt to parse any log file, but date filtering and time-based statistics require this timestamp format.
 
 ## Project Structure
 ```
@@ -327,13 +329,15 @@ This project is created for educational purposes as part of a software engineeri
 
 ## Author
 
-Woo Seok - [GitHub Profile](https://github.com/Froderic)
+**Woo Seok Lee** | [GitHub: @Froderic](https://github.com/Froderic)  
+Backend Developer | wooseoklee26@gmail.com  
+December 2025
 
-## Acknowledgments
+## Technical Highlights
 
-Built as part of a structured career transition plan to demonstrate proficiency in:
-- Java development
-- Command-line tool design
-- File I/O and data processing
-- Maven build management
-- Git version control
+This project demonstrates proficiency in:
+- **Core Java Development** - File I/O, regex, collections, streams
+- **CLI Design** - Picocli framework, argument parsing, user experience
+- **Data Processing** - Efficient log parsing, statistical analysis
+- **Build Tools** - Maven dependency management and packaging
+- **Software Engineering** - Clean code, documentation, version control
